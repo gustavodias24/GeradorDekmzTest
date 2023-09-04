@@ -47,8 +47,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_REQUEST_CODE = 100;
     private static final int PERMISSIONS_REQUEST_LOCATION = 102;
     double latitude, longitude;
-    private EditText editTextTitle;
-    private EditText editTextDescription;
     private ImageView imageView;
     private Bitmap capturedImage;
 
@@ -63,8 +61,6 @@ public class MainActivity extends AppCompatActivity {
 
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
 
-        editTextTitle = findViewById(R.id.editTextTitle);
-        editTextDescription = findViewById(R.id.editTextDescription);
         imageView = findViewById(R.id.imageView);
         textView = findViewById(R.id.loc_text);
 
@@ -138,8 +134,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void generateKMLFile() {
-        String title = editTextTitle.getText().toString();
-        String description = editTextDescription.getText().toString();
+        String title = vbinding.editTextTitle.getEditText().getText().toString().trim();
+        String description = vbinding.editTextDescription.getEditText().getText().toString().trim();
 
         // Criar um arquivo KML com título e descrição
         String kmlContent =
