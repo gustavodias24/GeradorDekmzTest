@@ -31,9 +31,15 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.benicio.geradordekmz.R;
+import com.benicio.geradordekmz.adapter.AdapterPointer;
 import com.benicio.geradordekmz.databinding.ActivityMainBinding;
+import com.benicio.geradordekmz.model.PointerModel;
+import com.benicio.geradordekmz.util.PointerStorageUtil;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 
@@ -41,6 +47,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -52,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
     private Bitmap capturedImage;
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityMainBinding vbinding;
+    private RecyclerView r;
+    private AdapterPointer adapter;
+    private List<PointerModel> lista = new ArrayList<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +85,27 @@ public class MainActivity extends AppCompatActivity {
         vbinding.atualizarLocBtn.setOnClickListener( view -> {
             getLocAtt();
         });
+
+        vbinding.adicionarPontoBtn.setOnClickListener(view -> {
+            getLocAtt();
+            String title = vbinding.editTextTitle.getEditText().getText().toString().trim();
+            String description = vbinding.editTextDescription.getEditText().getText().toString().trim();
+            PointerModel newPointer = new PointerModel(
+                    title,
+                    description,
+                    String.format("%s.jpg", UUID.randomUUID().toString()),
+                    latitude,
+                    longitude,
+                    capturedImage
+            );
+            Toast.makeText(this, "Ponto adicionado!", Toast.LENGTH_SHORT).show();
+            lista.add(newPointer);
+            PointerStorageUtil.savePointer(getApplicationContext(), lista);
+            adapter.notifyDataSetChanged();
+        });
+
+        configurarRecyclerView();
+        listarPointes();
     }
 
     private void getLocAtt(){
@@ -87,13 +120,6 @@ public class MainActivity extends AppCompatActivity {
     }
     private void requestLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         fusedLocationClient.getLastLocation()
@@ -208,5 +234,22 @@ public class MainActivity extends AppCompatActivity {
         intent.setDataAndType(uri, "application/vnd.google-earth.kmz");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(intent);
+    }
+
+    private void configurarRecyclerView(){
+        r = vbinding.recyclerPoints;
+        r.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+        r.setHasFixedSize(true);
+        r.addItemDecoration(new DividerItemDecoration(getApplicationContext(), DividerItemDecoration.VERTICAL));
+        adapter = new AdapterPointer(lista, getApplicationContext());
+        r.setAdapter(adapter);
+    }
+
+    private void listarPointes(){
+        lista.clear();
+        if (PointerStorageUtil.loadPointers(getApplicationContext()) != null){
+            lista.addAll(PointerStorageUtil.loadPointers(getApplicationContext()));
+            adapter.notifyDataSetChanged();
+        }
     }
 }
