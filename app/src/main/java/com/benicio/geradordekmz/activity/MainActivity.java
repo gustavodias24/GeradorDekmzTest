@@ -74,7 +74,23 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
 
-        vbinding.buttonCaptureImage.setOnClickListener(view -> captureImageFromCamera());
+        vbinding.buttonCaptureImage.setOnClickListener(view ->
+        {
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+                if ( checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED){
+                    String[] permissions = {Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+                    requestPermissions(permissions, CAMERA_REQUEST_CODE);
+                }
+                else {
+                    // already permisson
+                    captureImageFromCamera();
+                }
+            }
+            else{
+                // system < M
+                captureImageFromCamera();
+            }
+        });
 
         vbinding.buttonGenerateKML.setOnClickListener(view -> generateKMLFile());
 
@@ -156,28 +172,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void generateKMLFile() {
-        String title = vbinding.editTextTitle.getEditText().getText().toString().trim();
-        String description = vbinding.editTextDescription.getEditText().getText().toString().trim();
+
+        StringBuilder placeMarks = new StringBuilder();
+
+        for ( PointerModel p : lista){
+            placeMarks.append(p.getPlaceMark());
+        }
 
         // Criar um arquivo KML com título e descrição
         String kmlContent =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n" +
-                    "<Placemark>\n" +
-                        "<name>" + title + "</name>\n" +
-                        "<description>" + description + "</description>\n" +
-                        "<Point>\n" +
-                            "<coordinates>" + longitude + "," + latitude + ",0</coordinates>\n" + // Adicione ",0" à coordenada Z
-                        "</Point>\n" +
-                        "<Style>\n" +
-                            "<IconStyle>\n" +
-                                "<Icon>\n" +
-                                    "<href>image.jpg</href>\n" + // Referência à imagem
-                                "</Icon>\n" +
-                            "</IconStyle>\n" +
-                        "</Style>\n" +
-                    "</Placemark>\n" +
-                "</kml>";
+                "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n" + placeMarks + "</kml>";
+
 
         // Salvar o arquivo KML no armazenamento externo
         File kmlFile = new File(getExternalFilesDir(null), "marker.kml");
@@ -203,15 +209,15 @@ public class MainActivity extends AppCompatActivity {
             zos.write(kmlBytes, 0, kmlBytes.length);
             zos.closeEntry();
 
-            // Adicionar a imagem ao arquivo KMZ
-            if (capturedImage != null) {
+            // Adicionar a imagens ao arquivo KMZ
+            for ( PointerModel p : lista){
                 try {
-                    entry = new ZipEntry("image.jpg");
+                    entry = new ZipEntry(p.getImageName());
                     zos.putNextEntry(entry);
 
                     // Converter a imagem em um array de bytes
                     ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                    capturedImage.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                    p.getImage().compress(Bitmap.CompressFormat.JPEG, 100, stream);
                     byte[] imageBytes = stream.toByteArray();
 
                     // Escrever os bytes da imagem no arquivo KMZ

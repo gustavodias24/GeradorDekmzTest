@@ -37,7 +37,7 @@ public class AdapterPointer extends RecyclerView.Adapter<AdapterPointer.MyViewHo
         PointerModel pointer = list.get(position);
         holder.title.setText(
                 pointer.getTitle() +
-                String.format("Lat: %f Long: %f", pointer.getLat(), pointer.getLongi()));
+                String.format("\nLat: %f Long: %f", pointer.getLat(), pointer.getLongi()));
     }
 
     @Override
