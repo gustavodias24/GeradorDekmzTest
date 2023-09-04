@@ -1,4 +1,4 @@
-package com.benicio.geradordekmz;
+package com.benicio.geradordekmz.activity;
 
 import static android.location.LocationManager.GPS_PROVIDER;
 
@@ -32,6 +32,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import com.benicio.geradordekmz.R;
 import com.benicio.geradordekmz.databinding.ActivityMainBinding;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -49,8 +50,6 @@ public class MainActivity extends AppCompatActivity {
     double latitude, longitude;
     private ImageView imageView;
     private Bitmap capturedImage;
-
-    private TextView textView;
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityMainBinding vbinding;
     @Override
@@ -62,13 +61,10 @@ public class MainActivity extends AppCompatActivity {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
 
         imageView = findViewById(R.id.imageView);
-        textView = findViewById(R.id.loc_text);
 
-        Button buttonCaptureImage = findViewById(R.id.buttonCaptureImage);
-        buttonCaptureImage.setOnClickListener(view -> captureImageFromCamera());
+        vbinding.buttonCaptureImage.setOnClickListener(view -> captureImageFromCamera());
 
-        Button buttonGenerateKML = findViewById(R.id.buttonGenerateKML);
-        buttonGenerateKML.setOnClickListener(view -> generateKMLFile());
+        vbinding.buttonGenerateKML.setOnClickListener(view -> generateKMLFile());
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
