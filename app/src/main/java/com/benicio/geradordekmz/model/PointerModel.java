@@ -13,11 +13,6 @@ public class PointerModel implements Serializable {
     Double lat, longi;
     List<Uri> images;
 
-
-
-    public PointerModel() {
-    }
-
     public PointerModel(String title, String descri, String placemarkId, String imageId, Double lat, Double longi, List<Uri> images) {
         this.title = title;
         this.descri = descri;
@@ -31,58 +26,17 @@ public class PointerModel implements Serializable {
     public String getPlacemarkId() {
         return placemarkId;
     }
-
-    public void setPlacemarkId(String placemarkId) {
-        this.placemarkId = placemarkId;
-    }
-
-    public String getImageId() {
-        return imageId;
-    }
-
-    public void setImageId(String imageId) {
-        this.imageId = imageId;
-    }
-
-    public List<Uri> getImages() {
-        return images;
-    }
-
     public void setImages(List<Uri> images) {
         this.images = images;
     }
-
     public String getTitle() {
         return title;
     }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescri() {
-        return descri;
-    }
-
-    public void setDescri(String descri) {
-        this.descri = descri;
-    }
-
-
     public Double getLat() {
         return lat;
     }
-
-    public void setLat(Double lat) {
-        this.lat = lat;
-    }
-
     public Double getLongi() {
         return longi;
-    }
-
-    public void setLongi(Double longi) {
-        this.longi = longi;
     }
 
     private String getStyleIcon(){
@@ -161,7 +115,7 @@ public class PointerModel implements Serializable {
         }
 
         String placemarkXml =
-
+                getStyleIcon() +
                 getStyleMap() +
                 "<Placemark id=\"%s\">\n" +
                 "    <name>%s</name>\n" +
