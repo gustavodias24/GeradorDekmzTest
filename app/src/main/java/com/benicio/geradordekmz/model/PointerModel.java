@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public class PointerModel implements Serializable {
-    String title, descri, imageName, placemarkId, imageId;
+    String title, descri, placemarkId, imageId;
     Double lat, longi;
     List<Uri> images;
 
@@ -18,10 +18,9 @@ public class PointerModel implements Serializable {
     public PointerModel() {
     }
 
-    public PointerModel(String title, String descri, String imageName, String placemarkId, String imageId, Double lat, Double longi, List<Uri> images) {
+    public PointerModel(String title, String descri, String placemarkId, String imageId, Double lat, Double longi, List<Uri> images) {
         this.title = title;
         this.descri = descri;
-        this.imageName = imageName;
         this.placemarkId = placemarkId;
         this.imageId = imageId;
         this.lat = lat;
@@ -69,13 +68,6 @@ public class PointerModel implements Serializable {
         this.descri = descri;
     }
 
-    public String getImageName() {
-        return imageName;
-    }
-
-    public void setImageName(String imageName) {
-        this.imageName = imageName;
-    }
 
     public Double getLat() {
         return lat;
@@ -93,7 +85,55 @@ public class PointerModel implements Serializable {
         this.longi = longi;
     }
 
+    private String getStyleIcon(){
 
+        String xml = "<gx:CascadingStyle kml:id=\"%s\">\n" +
+                "    <Style>\n" +
+                "        <IconStyle>\n" +
+                "            <scale>1.2</scale>\n" +
+                "            <Icon>\n" +
+                "                <href>%s</href>\n" +
+                "            </Icon>\n" +
+                "        </IconStyle>\n" +
+                "        <LabelStyle>\n" +
+                "        </LabelStyle>\n" +
+                "        <LineStyle>\n" +
+                "            <color>%s</color>\n" +
+                "            <width>%s</width>\n" +
+                "        </LineStyle>\n" +
+                "        <PolyStyle>\n" +
+                "            <color>%s</color>\n" +
+                "        </PolyStyle>\n" +
+                "        <BalloonStyle>\n" +
+                "            <displayMode>%s</displayMode>\n" +
+                "        </BalloonStyle>\n" +
+                "    </Style>\n" +
+                "</gx:CascadingStyle>";
+
+        String id = this.placemarkId;
+        String href = images.get(0).toString();
+        String color = "ff2dc0fb";
+        String width = "4.8";
+        String polyColor = "40ffffff";
+        String displayMode = "hide";
+
+        return String.format(xml, id, href, color, width, polyColor, displayMode);
+    }
+    private String getStyleMap(){
+        String styleMapId = this.placemarkId;
+        String key = "highlight";
+        String styleUrl = this.placemarkId;
+
+       return String.format(
+                "<StyleMap id=\"%s\">\n" +
+                        "    <Pair>\n" +
+                        "        <key>%s</key>\n" +
+                        "        <styleUrl>%s</styleUrl>\n" +
+                        "    </Pair>\n" +
+                        "</StyleMap>",
+                styleMapId, key, styleUrl
+        );
+    }
     public String getPlaceMark() {
         String id = this.placemarkId;
         String name = this.title;
@@ -106,20 +146,24 @@ public class PointerModel implements Serializable {
         String fovy = "35";
         String range = "869.6198195626494";
         String altitudeMode = "absolute";
-        String styleUrl = "#__managed_style_08AA3D77B82B9B11FE7B";
+        String styleUrl = this.placemarkId;
         String imageId = this.imageId;
         @SuppressLint("DefaultLocale") String coordinates = String.format("%f,%f,596.8981538367215", this.longi.toString(),this.lat.toString() );
 
         StringBuilder imagesTagKml = new StringBuilder();
         for (Uri imageUri : images) {
-            String template = "<gx:Image kml:id=\"%s\">\n" +
-                    "            <gx:ImageUrl>%s</gx:ImageUrl>\n" +
-                    "        </gx:Image>\n";
+            String template =
+                    "<gx:Image kml:id=\"%s\">\n" +
+                    "    <gx:ImageUrl>%s</gx:ImageUrl>\n" +
+                    "</gx:Image>\n";
             String imageTag = String.format(template, imageId, imageUri.toString());
             imagesTagKml.append(imageTag);
         }
 
-        String placemarkXml = "<Placemark id=\"%s\">\n" +
+        String placemarkXml =
+
+                getStyleMap() +
+                "<Placemark id=\"%s\">\n" +
                 "    <name>%s</name>\n" +
                 "    <description><![CDATA[%s]]></description>\n" +
                 "    <LookAt>\n" +

@@ -1,54 +1,47 @@
 package com.benicio.geradordekmz.activity;
 
-import static android.location.LocationManager.GPS_PROVIDER;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.AdapterView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.benicio.geradordekmz.R;
+import com.benicio.geradordekmz.adapter.AdapterImages;
 import com.benicio.geradordekmz.adapter.AdapterPointer;
 import com.benicio.geradordekmz.databinding.ActivityMainBinding;
 import com.benicio.geradordekmz.model.PointerModel;
 import com.benicio.geradordekmz.util.PointerStorageUtil;
+import com.benicio.geradordekmz.util.RecyclerItemClickListener;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -58,13 +51,13 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_REQUEST_CODE = 100;
     private static final int PERMISSIONS_REQUEST_LOCATION = 102;
     double latitude, longitude;
-    private ImageView imageView;
-    private Bitmap capturedImage;
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityMainBinding vbinding;
-    private RecyclerView r;
+    private RecyclerView rPoint, rImages;
     private AdapterPointer adapter;
-    private List<PointerModel> lista = new ArrayList<>();
+    private AdapterImages adapterImges;
+    private List<PointerModel> pontos = new ArrayList<>();
+    private List<Uri> images = new ArrayList<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -72,8 +65,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(vbinding.getRoot());
 
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-
-        imageView = findViewById(R.id.imageView);
 
         vbinding.buttonCaptureImage.setOnClickListener(view ->
         {
@@ -108,16 +99,23 @@ public class MainActivity extends AppCompatActivity {
             String title = vbinding.editTextTitle.getEditText().getText().toString().trim();
             String description = vbinding.editTextDescription.getEditText().getText().toString().trim();
             PointerModel newPointer = new PointerModel(
-                  // colocar os dados aqui
+                    title,
+                    description,
+                    UUID.randomUUID().toString(),
+                    UUID.randomUUID().toString(),
+                    latitude,
+                    longitude,
+                    images
             );
             Toast.makeText(this, "Ponto adicionado!", Toast.LENGTH_SHORT).show();
-            lista.add(newPointer);
-            PointerStorageUtil.savePointer(getApplicationContext(), lista);
+            pontos.add(newPointer);
+            PointerStorageUtil.savePointer(getApplicationContext(), pontos);
             adapter.notifyDataSetChanged();
         });
 
         configurarRecyclerView();
         listarPointes();
+        listenerRecyclerPointer();
     }
 
     private void getLocAtt(){
@@ -159,9 +157,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-            capturedImage = (Bitmap) data.getExtras().get("data");
-            imageView.setImageBitmap(capturedImage);
-            imageView.setVisibility(View.VISIBLE);
+
+            images.add(data.getData());
+            rImages.setVisibility(View.VISIBLE);
+            vbinding.semImage.setVisibility(View.GONE);
+
+            Log.d("imageBucetina", data.getData().toString());
+
+//            capturedImage = (Bitmap) data.getExtras().get("data");
+//            imageView.setImageBitmap(capturedImage);
+//            imageView.setVisibility(View.VISIBLE);
         }
         if (requestCode == PERMISSIONS_REQUEST_LOCATION  && resultCode == RESULT_OK) {
             requestLocation();
@@ -172,12 +177,18 @@ public class MainActivity extends AppCompatActivity {
 
         StringBuilder placeMarks = new StringBuilder();
 
-        for ( PointerModel p : lista){
+        for ( PointerModel p : pontos){
             placeMarks.append(p.getPlaceMark());
         }
 
         // Criar um arquivo KML com título e descrição
-        String kmlContent = "";
+        String kmlContent =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\" xmlns:kml=\"http://www.opengis.net/kml/2.2\" xmlns:atom=\"http://www.w3.org/2005/Atom\">" +
+                    "<Document>"    +
+                        placeMarks  +
+                    "</Document>"   +
+                "</kml>";
 
 
         // Salvar o arquivo KML no armazenamento externo
@@ -205,23 +216,23 @@ public class MainActivity extends AppCompatActivity {
             zos.closeEntry();
 
             // Adicionar a imagens ao arquivo KMZ
-            for ( PointerModel p : lista){
-                try {
-                    entry = new ZipEntry(p.getImageName());
-                    zos.putNextEntry(entry);
-
-                    // Converter a imagem em um array de bytes
-                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                    p.getImage().compress(Bitmap.CompressFormat.JPEG, 100, stream);
-                    byte[] imageBytes = stream.toByteArray();
-
-                    // Escrever os bytes da imagem no arquivo KMZ
-                    zos.write(imageBytes, 0, imageBytes.length);
-                    zos.closeEntry();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+//            for ( PointerModel p : pontos){
+//                try {
+//                    entry = new ZipEntry(p.getImageName());
+//                    zos.putNextEntry(entry);
+//
+//                    // Converter a imagem em um array de bytes
+//                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                    p.getImage().compress(Bitmap.CompressFormat.JPEG, 100, stream);
+//                    byte[] imageBytes = stream.toByteArray();
+//
+//                    // Escrever os bytes da imagem no arquivo KMZ
+//                    zos.write(imageBytes, 0, imageBytes.length);
+//                    zos.closeEntry();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
 
             zos.close();
             fos.close();
@@ -238,19 +249,52 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void configurarRecyclerView(){
-        r = vbinding.recyclerPoints;
-        r.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
-        r.setHasFixedSize(true);
-        r.addItemDecoration(new DividerItemDecoration(getApplicationContext(), DividerItemDecoration.VERTICAL));
-        adapter = new AdapterPointer(lista, getApplicationContext());
-        r.setAdapter(adapter);
+        rPoint = vbinding.recyclerPoints;
+        rPoint.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
+        rPoint.setHasFixedSize(true);
+        rPoint.addItemDecoration(new DividerItemDecoration(getApplicationContext(), DividerItemDecoration.VERTICAL));
+        adapter = new AdapterPointer(pontos, getApplicationContext());
+        rPoint.setAdapter(adapter);
+
+        rImages = vbinding.recyclerImagens;
+        rPoint.setHasFixedSize(true);
+        rPoint.addItemDecoration(new DividerItemDecoration(getApplicationContext(), DividerItemDecoration.HORIZONTAL));
+        rPoint.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
+        adapterImges = new AdapterImages(images, getApplicationContext());
     }
 
     private void listarPointes(){
-        lista.clear();
+        pontos.clear();
         if (PointerStorageUtil.loadPointers(getApplicationContext()) != null){
-            lista.addAll(PointerStorageUtil.loadPointers(getApplicationContext()));
+            pontos.addAll(PointerStorageUtil.loadPointers(getApplicationContext()));
+            Collections.reverse(pontos);
             adapter.notifyDataSetChanged();
         }
+    }
+
+    public void listenerRecyclerPointer(){
+        ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this);
+                b.setMessage("Remover esse ponto?");
+                b.setPositiveButton("Sim", (dialogInterface, i) -> {
+                    pontos.remove(i);
+                    PointerStorageUtil.savePointer(getApplicationContext(), pontos);
+                    adapter.notifyDataSetChanged();
+                });
+                b.create().show();
+            }
+        };
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(itemTouchHelperCallback);
+        itemTouchHelper.attachToRecyclerView(rPoint);
+        
     }
 }
