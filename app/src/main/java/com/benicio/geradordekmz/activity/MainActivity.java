@@ -4,6 +4,7 @@ import static android.location.LocationManager.GPS_PROVIDER;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -107,12 +108,7 @@ public class MainActivity extends AppCompatActivity {
             String title = vbinding.editTextTitle.getEditText().getText().toString().trim();
             String description = vbinding.editTextDescription.getEditText().getText().toString().trim();
             PointerModel newPointer = new PointerModel(
-                    title,
-                    description,
-                    String.format("%s.jpg", UUID.randomUUID().toString()),
-                    latitude,
-                    longitude,
-                    capturedImage
+                  // colocar os dados aqui
             );
             Toast.makeText(this, "Ponto adicionado!", Toast.LENGTH_SHORT).show();
             lista.add(newPointer);
@@ -148,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    @SuppressLint("SetTextI18n")
     public void attLocText(Double lat, Double longi){
         Toast.makeText(this, "Atualizando...", Toast.LENGTH_SHORT).show();
         vbinding.locText.setTextColor(Color.BLACK);
@@ -180,9 +177,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Criar um arquivo KML com título e descrição
-        String kmlContent =
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n" + placeMarks + "</kml>";
+        String kmlContent = "";
 
 
         // Salvar o arquivo KML no armazenamento externo
